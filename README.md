@@ -39,8 +39,8 @@ A personal Outlook email scanner web app built with Next.js, TypeScript, and Mic
 3. Enter a name for your app (e.g., "Outlook Email Scanner")
 4. Supported account types: Select **Accounts in any organizational directory (Any Azure AD directory - Multitenant) and personal Microsoft accounts (e.g. Skype, Xbox)** 
 5. Redirect URI: 
-   - For development: `http://localhost:3000/api/auth/callback/microsoft-entra-id`
-   - For production: `https://your-vercel-domain.vercel.app/api/auth/callback/microsoft-entra-id`
+   - For development: `http://localhost:3000/api/auth/callback/azure-ad`
+   - For production: `https://your-vercel-domain.vercel.app/api/auth/callback/azure-ad`
 6. Click **Register**
 
 ### 2. Configure API Permissions
