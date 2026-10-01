@@ -27,6 +27,10 @@ interface GraphEmailResponse {
   "@odata.nextLink"?: string
 }
 
+interface GraphCountResponse {
+  "@odata.count"?: number
+}
+
 export async function getAccessToken(): Promise<string | null> {
   const session = await getServerSession(authOptions)
   return session?.accessToken ?? null
@@ -81,16 +85,16 @@ export async function fetchEmails(
   return data.value
 }
 
-export async function getEmailCount(filter = ""): Promise<number> {
-  const accessToken = await getAccessToken()
+export async function getEmailCount(filter = "", providedAccessToken?: string): Promise<number> {
+  const accessToken = providedAccessToken ?? await getAccessToken()
   if (!accessToken) {
     throw new Error("No access token available")
   }
 
   const params = new URLSearchParams({
     $count: "true",
-    $filter: filter,
   })
+  if (filter) params.set("$filter", filter)
 
   const url = `${GRAPH_ENDPOINT}/me/messages?${params.toString()}`
 
@@ -98,61 +102,77 @@ export async function getEmailCount(filter = ""): Promise<number> {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
+      ConsistencyLevel: "eventual",
     },
+    cache: "no-store",
   })
 
   if (!response.ok) {
     throw new Error(`Failed to get email count: ${response.statusText}`)
   }
 
-  // For $count=true, Graph API returns plain text
-  const text = await response.text()
-  return parseInt(text, 10)
+  const data: GraphCountResponse = await response.json()
+  if (typeof data["@odata.count"] !== "number") {
+    throw new Error("Microsoft Graph did not return an email count")
+  }
+  return data["@odata.count"]
 }
 
 export async function getEmailsByDateRange(
   days: number,
-  filter = ""
+  filter = "",
+  providedAccessToken?: string
 ): Promise<{ date: string; count: number }[]> {
-  const accessToken = await getAccessToken()
+  const accessToken = providedAccessToken ?? await getAccessToken()
   if (!accessToken) {
     throw new Error("No access token available")
   }
 
-  // Calculate date range
   const endDate = new Date()
-  const startDate = new Date()
-  startDate.setDate(endDate.getDate() - days + 1) // Include today
+  endDate.setUTCHours(0, 0, 0, 0)
+  const startDate = new Date(endDate)
+  startDate.setUTCDate(startDate.getUTCDate() - days + 1)
+  const endExclusive = new Date(endDate)
+  endExclusive.setUTCDate(endExclusive.getUTCDate() + 1)
 
-  const startString = startDate.toISOString().split("T")[0]
-  const endString = endDate.toISOString().split("T")[0]
-
-  const dateFilter = filter
-    ? `${filter} and receivedDateTime ge ${startString}T00:00:00Z and receivedDateTime le ${endString}T23:59:59Z`
-    : `receivedDateTime ge ${startString}T00:00:00Z and receivedDateTime le ${endString}T23:59:59Z`
-
-  // Group by date using Graph API
+  const startString = startDate.toISOString()
+  const endString = endExclusive.toISOString()
+  const dateFilter = `receivedDateTime ge ${startString} and receivedDateTime lt ${endString}`
+  const combinedFilter = filter ? `${filter} and ${dateFilter}` : dateFilter
   const params = new URLSearchParams({
-    $filter: dateFilter,
-    $apply: "groupby((receivedDateTime))",
+    $filter: combinedFilter,
+    $select: "receivedDateTime",
+    $top: "1000",
   })
 
-  const url = `${GRAPH_ENDPOINT}/me/messages?${params.toString()}`
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`Failed to get emails by date range: ${response.statusText}`)
+  const counts = new Map<string, number>()
+  for (let offset = 0; offset < days; offset += 1) {
+    const date = new Date(startDate)
+    date.setUTCDate(date.getUTCDate() + offset)
+    counts.set(date.toISOString().slice(0, 10), 0)
   }
 
-  const data: any = await response.json()
-  return data.value.map((item: any) => ({
-    date: item.receivedDateTime.split("T")[0],
-    count: item.count
-  }))
+  let nextUrl: string | undefined = `${GRAPH_ENDPOINT}/me/messages?${params.toString()}`
+  while (nextUrl) {
+    const response = await fetch(nextUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to get emails by date range: ${response.statusText}`)
+    }
+
+    const data: GraphEmailResponse = await response.json()
+    for (const email of data.value) {
+      const date = email.receivedDateTime.slice(0, 10)
+      counts.set(date, (counts.get(date) ?? 0) + 1)
+    }
+    nextUrl = data["@odata.nextLink"]
+  }
+
+  return Array.from(counts, ([date, count]) => ({ date, count }))
 }
