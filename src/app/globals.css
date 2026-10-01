@@ -1,26 +1,255 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f2fc;
+  --foreground: #241a30;
+  --surface: #fffaff;
+  --muted: #776a83;
+  --border: #e6d9ef;
+  --accent: #7542a5;
+  --accent-strong: #5c2c86;
+  --accent-soft: #eee2f8;
+  --rose: #cf4f91;
+  --rose-strong: #a83c76;
+  --rose-soft: #f9e4f0;
+  --gold: #b88727;
+  --gold-soft: #f7efd9;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: "Aptos", "Trebuchet MS", sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html.bts-theme.dark {
+  --background: #17131f;
+  --foreground: #f5effa;
+  --surface: #231b2d;
+  --muted: #b8acc5;
+  --border: #40334d;
+  --accent: #c4a0ed;
+  --accent-strong: #d7bdff;
+  --accent-soft: #392a49;
+  --rose: #f08bb9;
+  --rose-strong: #d9689d;
+  --rose-soft: #452638;
+  --gold: #e3c273;
+  --gold-soft: #403522;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Aptos", "Trebuchet MS", sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  letter-spacing: 0;
+}
+
+.bts-theme .bg-gray-50,
+.bts-theme .bg-gray-100 {
+  background-color: var(--background);
+}
+
+.bts-theme .bg-white,
+.bts-theme .bg-gray-800 {
+  background-color: var(--surface);
+}
+
+html.bts-theme.dark .dark\:bg-gray-900 {
+  background-color: var(--background);
+}
+
+html.bts-theme.dark .dark\:bg-gray-800 {
+  background-color: var(--surface);
+}
+
+.bts-theme .bg-blue-50,
+.bts-theme .bg-blue-100 {
+  background-color: var(--accent-soft);
+}
+
+.bts-theme .bg-green-100 {
+  background-color: var(--rose-soft);
+}
+
+.bts-theme .bg-yellow-100 {
+  background-color: var(--gold-soft);
+}
+
+.bts-theme .bg-blue-600,
+.bts-theme .bg-blue-500 {
+  background-color: var(--accent);
+}
+
+.bts-theme .bg-green-600,
+.bts-theme .bg-green-500 {
+  background-color: var(--rose);
+}
+
+html.bts-theme.dark .dark\:bg-blue-900 {
+  background-color: var(--accent-soft);
+}
+
+html.bts-theme.dark .dark\:bg-blue-500 {
+  background-color: var(--accent);
+}
+
+html.bts-theme.dark .dark\:bg-green-900 {
+  background-color: var(--rose-soft);
+}
+
+html.bts-theme.dark .dark\:bg-green-500 {
+  background-color: var(--rose);
+}
+
+html.bts-theme.dark .dark\:bg-yellow-900 {
+  background-color: var(--gold-soft);
+}
+
+.bts-theme .text-gray-900,
+.bts-theme .text-gray-800,
+.bts-theme .text-gray-700 {
+  color: var(--foreground);
+}
+
+.bts-theme .text-gray-600,
+.bts-theme .text-gray-500,
+.bts-theme .text-gray-400 {
+  color: var(--muted);
+}
+
+.bts-theme .text-blue-600,
+.bts-theme .text-blue-700 {
+  color: var(--accent);
+}
+
+.bts-theme .text-purple-700 {
+  color: var(--accent-strong);
+}
+
+.bts-theme .text-green-600 {
+  color: var(--rose);
+}
+
+html.bts-theme.dark .dark\:text-gray-100,
+html.bts-theme.dark .dark\:text-gray-200 {
+  color: var(--foreground);
+}
+
+html.bts-theme.dark .dark\:text-gray-300,
+html.bts-theme.dark .dark\:text-gray-400 {
+  color: var(--muted);
+}
+
+.bts-theme .border-gray-200,
+.bts-theme .border-gray-300,
+.bts-theme .border-gray-600,
+.bts-theme .border-gray-700 {
+  border-color: var(--border);
+}
+
+.bts-theme .hover\:bg-blue-700:hover,
+.bts-theme [class~="hover:bg-green-700"]:hover {
+  background-color: var(--accent-strong);
+}
+
+.bts-theme [class~="hover:bg-green-700"]:hover {
+  background-color: var(--rose-strong);
+}
+
+html.bts-theme.dark [class~="dark:hover:bg-blue-600"]:hover {
+  background-color: var(--accent-strong);
+}
+
+html.bts-theme.dark [class~="dark:hover:bg-green-600"]:hover {
+  background-color: var(--rose-strong);
+}
+
+.bts-theme .hover\:text-gray-900:hover {
+  color: var(--accent);
+}
+
+.bts-theme .bg-gradient-to-br {
+  background-image: linear-gradient(135deg, #f0e7fa 0%, #f8f1fb 54%, #fbeef5 100%);
+}
+
+html.bts-theme.dark .bg-gradient-to-br {
+  background-image: linear-gradient(135deg, #1b1626 0%, #211827 56%, #2a1928 100%);
+}
+
+.bts-theme nav {
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 8px 24px -20px rgb(59 31 82 / 45%);
+}
+
+.bts-theme nav .text-xl.font-semibold::after {
+  content: "BTS EDITION";
+  display: inline-block;
+  margin-left: 0.65rem;
+  border-left: 1px solid var(--border);
+  padding-left: 0.65rem;
+  color: var(--rose);
+  font-family: "Aptos", "Trebuchet MS", sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.bts-theme .shadow,
+.bts-theme .shadow-sm {
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 38px -28px rgb(56 31 74 / 45%);
+}
+
+.bts-theme .rounded-xl,
+.bts-theme .rounded-lg {
+  border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+  .bts-theme nav .text-xl.font-semibold {
+    font-size: 1rem;
+  }
+
+  .bts-theme nav .text-xl.font-semibold::after {
+    content: "BTS";
+    margin-left: 0.35rem;
+    padding-left: 0.35rem;
+  }
+}
+
+a,
+button {
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+button:enabled {
+  cursor: pointer;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

@@ -1,61 +1,64 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { EmailCard } from "@/components/email-card"
 import ThemeToggle from "@/components/theme-toggle"
 import LogoutButton from "@/components/logout-button"
 
-const SAMPLE_EMAILS = [
-  {
-    id: "1",
-    subject: "Quarterly planning update",
-    fromName: "Sarah Johnson",
-    fromEmail: "sarah@contoso.com",
-    receivedDateTime: "2026-09-30T09:15:00Z",
-    isRead: false,
-    summary: "The planning update highlights the launch timeline and asks for approval on the revised milestones before Friday.",
-    bodyPreview: "The planning update highlights the launch timeline and asks for approval on the revised milestones before Friday.",
-  },
-  {
-    id: "2",
-    subject: "Team standup notes",
-    fromName: "Alex Chen",
-    fromEmail: "alex@contoso.com",
-    receivedDateTime: "2026-09-29T16:40:00Z",
-    isRead: true,
-    summary: "The notes confirm the sprint goals, blockers, and next review meeting scheduled for Thursday afternoon.",
-    bodyPreview: "The notes confirm the sprint goals, blockers, and next review meeting scheduled for Thursday afternoon.",
-  },
-  {
-    id: "3",
-    subject: "Customer follow-up",
-    fromName: "Priya Patel",
-    fromEmail: "priya@contoso.com",
-    receivedDateTime: "2026-09-28T08:05:00Z",
-    isRead: false,
-    summary: "The customer requested a proposal review and an updated pricing breakdown before the end of the week.",
-    bodyPreview: "The customer requested a proposal review and an updated pricing breakdown before the end of the week.",
-  },
-  {
-    id: "4",
-    subject: "Travel approvals",
-    fromName: "Jordan Lee",
-    fromEmail: "jordan@contoso.com",
-    receivedDateTime: "2026-09-27T11:20:00Z",
-    isRead: true,
-    summary: "Approval for the travel request is in place and the team is coordinating hotel and flight bookings.",
-    bodyPreview: "Approval for the travel request is in place and the team is coordinating hotel and flight bookings.",
-  },
-]
+interface Email {
+  id: string
+  subject: string
+  fromName: string
+  fromEmail: string
+  receivedDateTime: string
+  isRead: boolean
+  summary: string
+  bodyPreview: string
+}
 
 export default function SummariesPage() {
+  const [emails, setEmails] = useState<Email[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
   const [searchTerm, setSearchTerm] = useState("")
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [dateRange, setDateRange] = useState("7days")
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadEmails() {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const response = await fetch("/api/emails", { cache: "no-store" })
+        const data: { emails?: Email[]; error?: string } = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || "Unable to load your emails.")
+        }
+
+        if (!cancelled) setEmails(data.emails ?? [])
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load your emails.")
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void loadEmails()
+    return () => {
+      cancelled = true
+    }
+  }, [refreshKey])
+
   const filteredEmails = useMemo(() => {
-    return SAMPLE_EMAILS.filter((email) => {
+    return emails.filter((email) => {
       const matchesSearch =
         searchTerm.trim().length === 0 ||
         email.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -78,7 +81,7 @@ export default function SummariesPage() {
 
       return matchesSearch && matchesUnread && matchesDateRange
     })
-  }, [searchTerm, unreadOnly, dateRange])
+  }, [emails, searchTerm, unreadOnly, dateRange])
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -151,9 +154,26 @@ export default function SummariesPage() {
               </div>
             </div>
 
-            {filteredEmails.length === 0 ? (
+            {loading ? (
+              <div className="py-12 text-center text-gray-500 dark:text-gray-400" role="status">
+                Loading your Outlook emails...
+              </div>
+            ) : error ? (
+              <div className="py-12 text-center">
+                <p className="text-red-600 dark:text-red-400">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => setRefreshKey((key) => key + 1)}
+                  className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : filteredEmails.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 dark:text-gray-400">No emails found matching your filters.</p>
+                <p className="text-gray-500 dark:text-gray-400">
+                  {emails.length === 0 ? "No Outlook emails found." : "No emails match your filters."}
+                </p>
               </div>
             ) : (
               <div className="space-y-4">

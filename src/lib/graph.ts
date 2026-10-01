@@ -36,9 +36,10 @@ export async function fetchEmails(
   top = 25,
   skip = 0,
   filter = "",
-  orderby = "receivedDateTime desc"
+  orderby = "receivedDateTime desc",
+  providedAccessToken?: string
 ): Promise<EmailMessage[]> {
-  const accessToken = await getAccessToken()
+  const accessToken = providedAccessToken ?? await getAccessToken()
   if (!accessToken) {
     throw new Error("No access token available")
   }

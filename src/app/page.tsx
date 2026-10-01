@@ -105,14 +105,14 @@ export default async function Home() {
                 <div className="space-y-4">
                   <Link
                     href="/summaries"
-                    className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    className="w-full bg-blue-600 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg active:translate-y-0 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
                   >
                     <span className="text-xl">📋</span>
                     View my summaries
                   </Link>
                   <Link
                     href="/dashboard"
-                    className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    className="w-full bg-green-600 hover:-translate-y-0.5 hover:bg-green-700 hover:shadow-lg active:translate-y-0 dark:bg-green-500 dark:hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
                   >
                     <span className="text-xl">📊</span>
                     Open dashboard
