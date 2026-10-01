@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import { EmailCard } from "@/components/email-card"
 import ThemeToggle from "@/components/theme-toggle"
+import LogoutButton from "@/components/logout-button"
 
 const SAMPLE_EMAILS = [
   {
@@ -96,6 +97,7 @@ export default function SummariesPage() {
                 <span className="text-gray-900 dark:text-gray-100">User</span>
               </div>
             </div>
+            <LogoutButton />
           </div>
         </div>
       </nav>

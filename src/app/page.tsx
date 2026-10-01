@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import Link from "next/link"
 import ThemeToggle from "@/components/theme-toggle"
+import LogoutButton from "@/components/logout-button"
 
 export default async function Home() {
   const session = await getServerSession(authOptions)
@@ -47,6 +48,7 @@ export default async function Home() {
                 <span className="text-gray-900 dark:text-gray-100">{userName}</span>
               </div>
             </div>
+            <LogoutButton />
           </div>
         </div>
       </nav>
