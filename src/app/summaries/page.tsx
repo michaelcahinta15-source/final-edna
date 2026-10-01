@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { EmailCard } from "@/components/email-card"
 import ThemeToggle from "@/components/theme-toggle"
 import LogoutButton from "@/components/logout-button"
+import { recordError } from "@/lib/error-logs"
 
 interface Email {
   id: string
@@ -17,21 +18,33 @@ interface Email {
   bodyPreview: string
 }
 
+const EMAIL_SCAN_INTERVAL_MS = 30_000
+
 export default function SummariesPage() {
   const [emails, setEmails] = useState<Email[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
+  const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null)
+  const [newEmailIds, setNewEmailIds] = useState<Set<string>>(() => new Set())
   const [refreshKey, setRefreshKey] = useState(0)
   const [searchTerm, setSearchTerm] = useState("")
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [dateRange, setDateRange] = useState("7days")
+  const emailsRef = useRef<Email[]>([])
+  const hasLoadedEmails = useRef(false)
 
   useEffect(() => {
     let cancelled = false
+    let requestInProgress = false
 
     async function loadEmails() {
-      setLoading(true)
-      setError(null)
+      if (requestInProgress) return
+      requestInProgress = true
+
+      if (hasLoadedEmails.current) setRefreshing(true)
+      else setLoading(true)
 
       try {
         const response = await fetch("/api/emails", { cache: "no-store" })
@@ -41,19 +54,43 @@ export default function SummariesPage() {
           throw new Error(data.error || "Unable to load your emails.")
         }
 
-        if (!cancelled) setEmails(data.emails ?? [])
+        if (!cancelled) {
+          const nextEmails = data.emails ?? []
+          const previousIds = new Set(emailsRef.current.map((email) => email.id))
+          const arrivedIds = hasLoadedEmails.current
+            ? nextEmails.filter((email) => !previousIds.has(email.id)).map((email) => email.id)
+            : []
+
+          emailsRef.current = nextEmails
+          hasLoadedEmails.current = true
+          setEmails(nextEmails)
+          setNewEmailIds(new Set(arrivedIds))
+          setLastCheckedAt(new Date())
+          setError(null)
+          setRefreshError(null)
+        }
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load your emails.")
+          const message = loadError instanceof Error ? loadError.message : "Unable to load your emails."
+          recordError(loadError, "Load email summaries")
+          if (hasLoadedEmails.current) setRefreshError(message)
+          else setError(message)
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        requestInProgress = false
+        if (!cancelled) {
+          setLoading(false)
+          setRefreshing(false)
+        }
       }
     }
 
     void loadEmails()
+    const intervalId = window.setInterval(() => void loadEmails(), EMAIL_SCAN_INTERVAL_MS)
+
     return () => {
       cancelled = true
+      window.clearInterval(intervalId)
     }
   }, [refreshKey])
 
@@ -95,6 +132,7 @@ export default function SummariesPage() {
               <Link href="/" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">Home</Link>
               <Link href="/summaries" className="text-gray-500 dark:text-gray-400 font-medium text-gray-900 dark:text-gray-100">Summaries</Link>
               <Link href="/dashboard" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">Dashboard</Link>
+              <Link href="/errors" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">Errors</Link>
               <div className="flex items-center gap-4">
                 <ThemeToggle />
                 <span className="text-gray-900 dark:text-gray-100">User</span>
@@ -109,7 +147,22 @@ export default function SummariesPage() {
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Your Email Summaries</h1>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Your Email Summaries</h1>
+                <p role="status" className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
+                  {refreshing
+                    ? "Checking for new mail..."
+                    : lastCheckedAt
+                      ? `Auto-checks every 30 seconds · Last checked ${lastCheckedAt.toLocaleTimeString()}`
+                      : "Checking your inbox..."}
+                </p>
+                {refreshError && (
+                  <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                    Could not refresh right now. Your email list is still available; checking again in 30 seconds.
+                  </p>
+                )}
+              </div>
 
               <div className="flex flex-col md:flex-row md:space-x-4 w-full md:w-auto">
                 <div className="relative w-full md:w-64">
@@ -178,7 +231,12 @@ export default function SummariesPage() {
             ) : (
               <div className="space-y-4">
                 {filteredEmails.map((email) => (
-                  <EmailCard key={email.id} email={email} />
+                  <EmailCard
+                    key={email.id}
+                    email={email}
+                    isNew={newEmailIds.has(email.id)}
+                    shiftDown={newEmailIds.size > 0 && !newEmailIds.has(email.id)}
+                  />
                 ))}
               </div>
             )}

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import type { FC } from "react"
+import type { FC, FormEvent } from "react"
+import { recordError } from "@/lib/error-logs"
 
 interface Email {
   id: string
@@ -16,20 +17,54 @@ interface Email {
 
 interface EmailCardProps {
   email: Email
+  isNew?: boolean
+  shiftDown?: boolean
   onMarkAsRead?: (id: string) => void
   onMarkAsUnread?: (id: string) => void
 }
 
-export const EmailCard: FC<EmailCardProps> = ({ email, onMarkAsRead, onMarkAsUnread }) => {
+export const EmailCard: FC<EmailCardProps> = ({ email, isNew = false, shiftDown = false, onMarkAsRead, onMarkAsUnread }) => {
   const [expanded, setExpanded] = useState(false)
+  const [reply, setReply] = useState("")
+  const [replySending, setReplySending] = useState(false)
+  const [replySent, setReplySent] = useState(false)
+  const [replyError, setReplyError] = useState<string | null>(null)
 
   const handleToggleRead = () => {
     if (email.isRead && onMarkAsUnread) onMarkAsUnread(email.id)
     if (!email.isRead && onMarkAsRead) onMarkAsRead(email.id)
   }
 
+  const handleReply = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!reply.trim() || replySending) return
+
+    setReplySending(true)
+    setReplyError(null)
+    setReplySent(false)
+
+    try {
+      const response = await fetch(`/api/emails/${encodeURIComponent(email.id)}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment: reply }),
+      })
+      const data: { error?: string } = await response.json()
+
+      if (!response.ok) throw new Error(data.error || "Unable to send your reply.")
+
+      setReply("")
+      setReplySent(true)
+    } catch (error) {
+      recordError(error, "Send email reply")
+      setReplyError(error instanceof Error ? error.message : "Unable to send your reply.")
+    } finally {
+      setReplySending(false)
+    }
+  }
+
   return (
-    <article className="rounded-lg bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-800 sm:p-6">
+    <article className={`rounded-lg bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-800 sm:p-6 ${isNew ? "email-arrival" : shiftDown ? "email-shift-down" : ""}`}>
       <div className="flex items-start gap-3">
         {!email.isRead && (
           <span className="mt-2 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-blue-500 dark:bg-blue-400" aria-label="Unread" />
@@ -71,6 +106,37 @@ export const EmailCard: FC<EmailCardProps> = ({ email, onMarkAsRead, onMarkAsUnr
             <div id={`email-preview-${email.id}`} className="mt-4 border-t border-gray-200 pt-4 text-sm leading-6 text-gray-700 dark:border-gray-700 dark:text-gray-200">
               <p className="mb-1 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Message preview</p>
               {email.bodyPreview || email.summary}
+              <form onSubmit={handleReply} className="mt-5 space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+                <label htmlFor={`reply-${email.id}`} className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  Reply to {email.fromName}
+                </label>
+                <textarea
+                  id={`reply-${email.id}`}
+                  value={reply}
+                  onChange={(event) => {
+                    setReply(event.target.value)
+                    setReplySent(false)
+                    setReplyError(null)
+                  }}
+                  maxLength={8000}
+                  rows={4}
+                  placeholder="Write your reply..."
+                  className="block w-full resize-y rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400"
+                  disabled={replySending}
+                />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{reply.length}/8,000</span>
+                  <button
+                    type="submit"
+                    disabled={!reply.trim() || replySending}
+                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+                  >
+                    {replySending ? "Sending..." : "Send reply"}
+                  </button>
+                </div>
+                {replySent && <p role="status" className="text-sm text-green-700 dark:text-green-400">Reply sent.</p>}
+                {replyError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{replyError}</p>}
+              </form>
             </div>
           )}
         </div>

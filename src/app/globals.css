@@ -213,6 +213,36 @@ html.bts-theme.dark .bg-gradient-to-br {
   border-radius: 8px;
 }
 
+@keyframes email-arrival {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.email-arrival {
+  animation: email-arrival 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes email-shift-down {
+  from {
+    transform: translateY(-16px);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+.email-shift-down {
+  animation: email-shift-down 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
 @media (max-width: 640px) {
   .bts-theme nav .text-xl.font-semibold {
     font-size: 1rem;

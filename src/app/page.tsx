@@ -43,6 +43,9 @@ export default async function Home() {
               <Link href="/dashboard" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
                 Dashboard
               </Link>
+              <Link href="/errors" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
+                Errors
+              </Link>
               <div className="flex items-center gap-4">
                 <ThemeToggle />
                 <span className="text-gray-900 dark:text-gray-100">{userName}</span>
