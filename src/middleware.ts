@@ -2,7 +2,7 @@ import { withAuth } from "next-auth/middleware"
 import { NextResponse } from "next/server"
 
 export default withAuth(
-  function middleware(req) {
+  function middleware() {
     // The token is available in req.nextauth.token
     // You can add additional checks here if needed
     return NextResponse.next()
@@ -27,6 +27,6 @@ export const config = {
      * - /login (login page)
      * - /api/auth (auth routes)
      */
-    '/((?!_next/static|_next/image|favicon.ico|/login|/api/auth).*)',
+    "/((?!_next/static|_next/image|favicon.ico|login|api/auth).*)",
   ],
 }
