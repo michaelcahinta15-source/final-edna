@@ -1,6 +1,15 @@
 import type { NextAuthOptions } from "next-auth"
 import AzureADProvider from "next-auth/providers/azure-ad"
 
+const microsoftClientId =
+  process.env.AUTH_MICROSOFT_ENTRA_ID_ID ?? process.env.AZURE_AD_CLIENT_ID ?? ""
+const microsoftClientSecret =
+  process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET ?? process.env.AZURE_AD_CLIENT_SECRET ?? ""
+const microsoftTenantId =
+  process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID ?? process.env.AZURE_AD_TENANT_ID ?? "common"
+
+export const isMicrosoftAuthConfigured = Boolean(microsoftClientId && microsoftClientSecret)
+
 declare module "next-auth" {
   interface Session {
     accessToken?: string
@@ -18,14 +27,21 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
-  providers: [
-    AzureADProvider({
-      clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID!,
-      clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET!,
-      tenantId: process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID ?? "common",
-      authorization: { params: { scope: "openid profile email offline_access User.Read Mail.Read Mail.Send" } },
-    }),
-  ],
+  providers: isMicrosoftAuthConfigured
+    ? [
+        AzureADProvider({
+          clientId: microsoftClientId,
+          clientSecret: microsoftClientSecret,
+          tenantId: microsoftTenantId,
+          authorization: {
+            params: {
+              scope: "openid profile email offline_access User.Read Mail.Read Mail.Send",
+              response_type: "code",
+            },
+          },
+        }),
+      ]
+    : [],
   callbacks: {
     async jwt({ token, account }) {
       if (account) {

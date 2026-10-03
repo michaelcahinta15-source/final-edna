@@ -1,8 +1,25 @@
 "use client"
 
+import { useState } from "react"
 import { signIn } from "next-auth/react"
 
 export default function LoginPage() {
+  const [authError, setAuthError] = useState<string | null>(null)
+
+  const handleSignIn = async () => {
+    setAuthError(null)
+
+    try {
+      await signIn("azure-ad", { callbackUrl: "/dashboard" })
+    } catch (error) {
+      setAuthError(
+        error instanceof Error
+          ? error.message
+          : "Microsoft sign-in could not be started. Check your Entra ID configuration.",
+      )
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="w-full max-w-md space-y-8 p-6">
@@ -24,12 +41,18 @@ export default function LoginPage() {
 
         <div className="space-y-4">
           <button
-            onClick={() => signIn("azure-ad", { callbackUrl: "/dashboard" })}
+            onClick={() => void handleSignIn()}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
           >
             Sign in with Microsoft
           </button>
         </div>
+
+        {authError && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-900/20 dark:text-red-200">
+            {authError}
+          </div>
+        )}
 
         <div className="text-center text-sm text-gray-500 dark:text-gray-400">
           Your emails are processed only to create summaries and are never stored.
