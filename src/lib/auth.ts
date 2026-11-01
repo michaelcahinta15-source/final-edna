@@ -1,5 +1,7 @@
+import { createHash, timingSafeEqual } from "node:crypto"
 import type { NextAuthOptions } from "next-auth"
 import AzureADProvider from "next-auth/providers/azure-ad"
+import CredentialsProvider from "next-auth/providers/credentials"
 
 const microsoftClientId =
   process.env.AUTH_MICROSOFT_ENTRA_ID_ID ?? process.env.AZURE_AD_CLIENT_ID ?? ""
@@ -7,8 +9,22 @@ const microsoftClientSecret =
   process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET ?? process.env.AZURE_AD_CLIENT_SECRET ?? ""
 const microsoftTenantId =
   process.env.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID ?? process.env.AZURE_AD_TENANT_ID ?? "common"
+const adminUsername = process.env.ADMIN_USERNAME ?? ""
+const adminPassword = process.env.ADMIN_PASSWORD ?? ""
 
 export const isMicrosoftAuthConfigured = Boolean(microsoftClientId && microsoftClientSecret)
+const isAdminAuthConfigured = Boolean(adminUsername && adminPassword)
+
+function matchesConfiguredCredential(value: unknown, configuredValue: string): boolean {
+  if (typeof value !== "string") {
+    return false
+  }
+
+  const valueHash = createHash("sha256").update(value).digest()
+  const configuredValueHash = createHash("sha256").update(configuredValue).digest()
+
+  return timingSafeEqual(valueHash, configuredValueHash)
+}
 
 declare module "next-auth" {
   interface Session {
@@ -27,8 +43,9 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
-  providers: isMicrosoftAuthConfigured
-    ? [
+  providers: [
+    ...(isMicrosoftAuthConfigured
+      ? [
         AzureADProvider({
           clientId: microsoftClientId,
           clientSecret: microsoftClientSecret,
@@ -41,7 +58,30 @@ export const authOptions: NextAuthOptions = {
           },
         }),
       ]
-    : [],
+      : []),
+    ...(isAdminAuthConfigured
+      ? [
+          CredentialsProvider({
+            id: "admin-credentials",
+            name: "Admin credentials",
+            credentials: {
+              username: { label: "Username", type: "text" },
+              password: { label: "Password", type: "password" },
+            },
+            async authorize(credentials) {
+              if (
+                !matchesConfiguredCredential(credentials?.username, adminUsername) ||
+                !matchesConfiguredCredential(credentials?.password, adminPassword)
+              ) {
+                return null
+              }
+
+              return { id: "admin", name: "Admin" }
+            },
+          }),
+        ]
+      : []),
+  ],
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
@@ -61,5 +101,5 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
-  secret: process.env.AUTH_SECRET,
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 }
